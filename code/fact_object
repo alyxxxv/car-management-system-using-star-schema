@@ -1,0 +1,45 @@
+import pandas as pd
+from faker import Faker
+import random
+from datetime import datetime, timedelta
+
+# Initialize Faker
+fake = Faker()
+
+# Load seller and product data
+dim_seller = pd.read_csv('/content/drive/MyDrive/Pacman/dim_seller.csv')  # Adjust the path as needed
+dim_product = pd.read_csv('/content/drive/MyDrive/Pacman/dim_product.csv')  # Adjust the path as needed
+
+common_car_colors = ['Black', 'White', 'Silver', 'Gray', 'Blue', 'Red', 'Brown', 'Green', 'Yellow', 'Orange']
+
+# Randomly choose seller_id and product_id from the existing tables
+seller_ids = dim_seller['seller_id'].tolist()
+product_ids = dim_product['product_id'].tolist()
+product_prices = dict(zip(dim_product['product_id'], dim_product['price']))  # Dictionary of product_id and their prices
+
+# Function to generate fact table
+def generate_fact_object(num_records):
+    data = []
+    for _ in range(num_records):
+        appl_no = random.randint(10000, 99999)  # Random 5-digit number
+        seller_id = random.choice(seller_ids)  # Random seller
+        product_id = random.choice(product_ids)  # Random product
+        original_price = product_prices[product_id]
+        obj_price = original_price - random.uniform(0, 0.1) * original_price  # Max 10% discount
+        obj_warna = random.choice(common_car_colors)  # Random car color
+        date_post = fake.date_between(start_date='-1y', end_date='today')  # Random date within the past year
+        website = fake.url()  # Random website
+
+        # Append to data
+        data.append([appl_no, seller_id, product_id, obj_price, obj_warna, date_post, website])
+
+    return pd.DataFrame(data, columns=['appl_no', 'seller_id', 'product_id', 'obj_price', 'obj_warna', 'date_post', 'website'])
+
+# Generate fact_object table
+num_records = 400  # You can adjust the number of records
+fact_object = generate_fact_object(num_records)
+
+# Save the DataFrame to a CSV file
+fact_object.to_csv('/content/drive/MyDrive/Pacman/fact_object.csv', index=False)
+
+print("fact_object.csv has been saved successfully!")
