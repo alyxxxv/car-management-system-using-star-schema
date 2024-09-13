@@ -1,0 +1,64 @@
+import pandas as pd
+from faker import Faker
+import random
+from datetime import timedelta, datetime
+
+# Initialize Faker
+fake = Faker()
+
+# Load dim_customer and fact_object data
+dim_customer = pd.read_csv('/content/drive/MyDrive/Pacman/dim_customer.csv')  # Adjust the path as needed
+fact_object = pd.read_csv('/content/drive/MyDrive/Pacman/fact_object.csv')  # Adjust the path as needed
+
+# Ensure 'date_post' in fact_object is in datetime format
+fact_object['date_post'] = pd.to_datetime(fact_object['date_post'], errors='coerce')
+
+# Extract relevant data from the tables
+customer_ids = dim_customer['customer_id'].tolist()  # List of customer_ids
+fact_object_data = fact_object[['appl_no', 'obj_price', 'date_post']]  # Get appl_no, price, and post date
+
+# Function to generate random time
+def generate_random_time():
+    # Generate a random hour, minute, second
+    random_hour = random.randint(0, 23)
+    random_minute = random.randint(0, 59)
+    random_second = random.randint(0, 59)
+    return datetime(1, 1, 1, random_hour, random_minute, random_second).time()
+
+# Function to generate fact_application table
+def generate_fact_application(num_records):
+    data = []
+
+    for _ in range(num_records):
+        contract_no = random.randint(10000000, 99999999)  # 8-digit contract number
+        row = fact_object_data.sample(1).iloc[0]  # Randomly select one appl_no from fact_object
+        appl_no = row['appl_no']
+        obj_price = row['obj_price']
+        post_date = row['date_post']
+
+        customer_id = random.choice(customer_ids)  # Randomly select a customer
+
+        # Generate date_bid by adding random days (between 1 and 30) to post_date
+        random_days = random.randint(1, 30)
+        date_bid = post_date + timedelta(days=random_days)
+
+        # Generate a random time and combine it with date_bid
+        random_time = generate_random_time()
+        date_bid = datetime.combine(date_bid, random_time)  # Combine date_bid date with the random time
+
+        bid_price = obj_price - random.uniform(0, 0.05) * obj_price  # Bid price slightly less than obj_price (up to 5% discount)
+        bid_status = "sent"  # Set bid status to "sent"
+
+        # Append to data
+        data.append([contract_no, appl_no, customer_id, date_bid, bid_price, bid_status])
+
+    return pd.DataFrame(data, columns=['contract_no', 'appl_no', 'customer_id', 'date_bid', 'bid_price', 'bid_status'])
+
+# Generate fact_application table
+num_records = 350 # You can adjust the number of records
+fact_application = generate_fact_application(num_records)
+
+# Save the DataFrame to a CSV file
+fact_application.to_csv('/content/drive/MyDrive/Pacman/fact_application.csv', index=False)
+
+print("fact_application.csv has been saved successfully!")
